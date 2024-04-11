@@ -1,0 +1,187 @@
+import { LightningElement, track } from 'lwc';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+
+export default class EmpApiLWC extends LightningElement {
+    @track channelName = '/data/AccountChangeEvent';
+    @track isSubscribeDisabled = false;
+    @track isUnsubscribeDisabled = !this.isSubscribeDisabled;
+    @track showTable = false;
+    @track _tableData = [];
+    @track columns = [
+        { label: 'SR No.', fieldName: 'srNo' }, // Add SR No. column
+        { label: 'Entity Type', fieldName: 'entityName' },
+        { label: 'Change Type', fieldName: 'changeType' },
+        { label: 'Record IDs', fieldName: 'recordIds', type: 'text' }
+    ];
+
+    subscription = null;
+
+    handleChannelName(event) {
+        this.channelName = event.target.value;
+    }
+
+    connectedCallback() {
+        this.registerErrorListener();
+    }
+
+    handleSubscribe() {
+        if (!this.subscription) {
+            const messageCallback = (response) => {
+                console.log('New message received: ', JSON.stringify(response));
+                if (response.data) {
+                    const payload = response.data.payload;
+                    if (payload.ChangeEventHeader) {
+                        const { entityName, changeType, recordIds } =
+                            payload.ChangeEventHeader;
+                        if (changeType === 'DELETE') {
+                            recordIds.forEach((recordId) => {
+                                this._tableData = [
+                                    ...this._tableData,
+                                    {
+                                        srNo: this._tableData.length + 1, // Calculate SR No.
+                                        entityName,
+                                        changeType,
+                                        recordIds: recordId
+                                    }
+                                ];
+                            });
+                        } else {
+                            this._tableData = [
+                                ...this._tableData,
+                                {
+                                    srNo: this._tableData.length + 1, // Calculate SR No.
+                                    entityName,
+                                    changeType,
+                                    recordIds: recordIds.join(', ')
+                                }
+                            ];
+                        }
+                        this.showTable = true;
+                    }
+                }
+            };
+
+            subscribe(this.channelName, -1, messageCallback)
+                .then((response) => {
+                    console.log(
+                        'Subscription request sent to: ',
+                        JSON.stringify(response.channel)
+                    );
+                    this.subscription = response;
+                    this.toggleSubscribeButton(true);
+                })
+                .catch((error) => {
+                    console.error('Error subscribing: ', JSON.stringify(error));
+                });
+        } else {
+            this.handleUnsubscribe();
+        }
+    }
+
+    handleUnsubscribe() {
+        if (this.subscription) {
+            unsubscribe(this.subscription, (response) => {
+                console.log(
+                    'unsubscribe() response: ',
+                    JSON.stringify(response)
+                );
+                this.subscription = null;
+                this.toggleSubscribeButton(false);
+                this.showTable = false;
+                this._tableData = [];
+            }).catch((error) => {
+                console.error('Error unsubscribing: ', JSON.stringify(error));
+            });
+        }
+    }
+
+    toggleSubscribeButton(enableSubscribe) {
+        this.isSubscribeDisabled = enableSubscribe;
+        this.isUnsubscribeDisabled = !enableSubscribe;
+    }
+
+    registerErrorListener() {
+        onError((error) => {
+            console.log('Received error from server: ', JSON.stringify(error));
+        });
+    }
+
+    get tableData() {
+        return [...this._tableData];
+    }
+
+    downloadCsv() {
+        const csvData = this.convertToCsv(this._tableData);
+        const csvContent = `data:text/csv;charset=utf-8,${encodeURI(csvData)}`;
+        const link = document.createElement('a');
+        link.setAttribute('href', csvContent);
+        link.setAttribute('download', 'datatable.csv');
+        document.body.appendChild(link);
+        link.click();
+    }
+
+    convertToCsv(data) {
+        const header = Object.keys(data[0]).join(',');
+        const rows = data.map((row) => Object.values(row).join(','));
+        return `${header}\n${rows.join('\n')}`;
+    }
+}
+
+
+
+
+
+========================================================
+
+<template>
+    <lightning-card title="EmpApi Example" icon-name="custom:custom14">
+        <div class="slds-m-around_medium">
+            <p>
+                Use the buttons below to subscribe and unsubscribe to a
+                streaming channel!
+            </p>
+            <lightning-input
+                label="Channel Name"
+                value={channelName}
+                onchange={handleChannelName}
+            ></lightning-input>
+        </div>
+        <div class="slds-m-around_small">
+            <lightning-button
+                variant="success"
+                label="Subscribe"
+                title="Subscribe"
+                onclick={handleSubscribe}
+                disabled={isSubscribeDisabled}
+                class="slds-m-left_x-small"
+            ></lightning-button>
+            <lightning-button
+                variant="destructive"
+                label="Unsubscribe"
+                title="Unsubscribe"
+                onclick={handleUnsubscribe}
+                disabled={isUnsubscribeDisabled}
+                class="slds-m-left_x-small"
+            ></lightning-button>
+            <lightning-button
+                variant="brand"
+                label="Download CSV"
+                title="Download CSV"
+                onclick={downloadCsv}
+                class="slds-m-left_x-small"
+            ></lightning-button>
+        </div>
+        <div class="slds-m-around_medium">
+            <template if:true={showTable}>
+                <lightning-datatable
+                    key-field="id"
+                    data={tableData}
+                    columns={columns}
+                    hide-checkbox-column="true"
+                >
+                </lightning-datatable>
+            </template>
+        </div>
+    </lightning-card>
+</template>
+
