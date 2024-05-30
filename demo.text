@@ -1,2 +1,133 @@
-THis is text file
-This is new line
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radial Segment Chart with Tooltip</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        canvas {
+            border: 1px solid #ddd;
+        }
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: none;
+            pointer-events: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div style="position: relative;">
+        <canvas id="myRadialChart" width="500" height="500"></canvas>
+        <div id="tooltip"></div>
+    </div>
+    <script>
+        // JSON data
+        const data = [
+            { key: 1, percentage: 95, ratio: 1, strWidth: 15, fill: '#483D8B' },
+            { key: 2, percentage: 90, ratio: 1, strWidth: 15, fill: '#AAAAAA' },
+            { key: 3, percentage: 70, ratio: 1, strWidth: 15, fill: '#36A2EB' },
+            { key: 4, percentage: 60, ratio: 1, strWidth: 15, fill: '#FFCE56' },
+            { key: 5, percentage: 50, ratio: 1, strWidth: 15, fill: '#FF6384' }
+        ];
+
+        // Get the canvas element
+        const canvas = document.getElementById('myRadialChart');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+
+        // Chart parameters
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = Math.min(centerX, centerY) - 20;
+        const gapBetweenRings = 10;
+
+        // Function to draw the chart
+        function drawChart(highlightIndex = -1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            data.forEach((datum, index) => {
+                const radius = maxRadius - (index * (datum.strWidth + gapBetweenRings));
+                const startAngle = -0.5 * Math.PI;
+                const endAngle = startAngle + (datum.percentage / 100) * 2 * Math.PI;
+
+                const isHighlighted = index === highlightIndex;
+                const effectiveWidth = isHighlighted ? datum.strWidth + 5 : datum.strWidth;
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.lineWidth = effectiveWidth;
+                ctx.strokeStyle = datum.fill;
+                ctx.stroke();
+            });
+        }
+
+        // Initial draw
+        drawChart();
+
+        // Function to detect mouse position over the canvas
+        function getMousePos(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        // Function to handle mouse move events
+        canvas.addEventListener('mousemove', (event) => {
+            const mousePos = getMousePos(canvas, event);
+            const dx = mousePos.x - centerX;
+            const dy = mousePos.y - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            let angle = Math.atan2(dy, dx);
+            if (angle < -0.5 * Math.PI) {
+                angle += 2 * Math.PI; // Adjust for negative angles
+            }
+
+            let highlightedIndex = -1;
+            data.forEach((datum, index) => {
+                const radius = maxRadius - (index * (datum.strWidth + gapBetweenRings));
+                const startAngle = -0.5 * Math.PI;
+                const endAngle = startAngle + (datum.percentage / 100) * 2 * Math.PI;
+
+                const isWithinRadius = distance >= (radius - datum.strWidth / 2) && distance <= (radius + datum.strWidth / 2);
+                const isWithinAngle = angle >= startAngle && angle <= endAngle;
+
+                if (isWithinRadius && isWithinAngle) {
+                    highlightedIndex = index;
+                    tooltip.style.left = `${event.clientX + 10}px`;
+                    tooltip.style.top = `${event.clientY + 10}px`;
+                    tooltip.style.display = 'block';
+                    tooltip.textContent = `${datum.percentage}%`;
+                }
+            });
+
+            if (highlightedIndex === -1) {
+                tooltip.style.display = 'none';
+            }
+
+            // Redraw the chart with the highlighted segment
+            drawChart(highlightedIndex);
+        });
+
+        // Hide tooltip when mouse leaves the canvas
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+            drawChart();
+        });
+    </script>
+</body>
+</html>
