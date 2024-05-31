@@ -1,133 +1,159 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radial Segment Chart with Tooltip</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-            margin: 0;
-        }
-        canvas {
-            border: 1px solid #ddd;
-        }
-        #tooltip {
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: none;
-            pointer-events: none;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div style="position: relative;">
-        <canvas id="myRadialChart" width="500" height="500"></canvas>
-        <div id="tooltip"></div>
-    </div>
-    <script>
-        // JSON data
-        const data = [
-            { key: 1, percentage: 95, ratio: 1, strWidth: 15, fill: '#483D8B' },
-            { key: 2, percentage: 90, ratio: 1, strWidth: 15, fill: '#AAAAAA' },
-            { key: 3, percentage: 70, ratio: 1, strWidth: 15, fill: '#36A2EB' },
-            { key: 4, percentage: 60, ratio: 1, strWidth: 15, fill: '#FFCE56' },
-            { key: 5, percentage: 50, ratio: 1, strWidth: 15, fill: '#FF6384' }
+<template>
+    <lightning-card>
+        <div
+            class="slds-grid slds-wrap slds-m-bottom_small slds-grid_align-spread"
+        >
+            <h3 class="slds-text-heading_small slds-m-bottom_none">
+                <lightning-icon
+                    icon-name="utility:connected_apps"
+                    size="small"
+                    class="slds-m-right_x-small"
+                ></lightning-icon>
+                Customer Engagements & Signals
+            </h3>
+            <lightning-combobox
+                class="slds-m-left_auto slds-p-horizontal_medium combobox-larger"
+                name="filters"
+                placeholder="Select Filter"
+                options={filterOptions}
+                value={selectedFilter}
+                onchange={handleFilterChange}
+            >
+            </lightning-combobox>
+        </div>
+        <div class="slds-m-around_medium">
+            <lightning-layout
+                horizontal-align="spread"
+                vertical-align="start"
+                wrap
+            >
+                <lightning-layout-item
+                    flexibility="auto"
+                    padding="around-small"
+                    class="slds-grid slds-wrap slds-gutters badges-container"
+                >
+                    <lightning-badge
+                        label="All (65)"
+                        class={allBadgeClass}
+                        data-badge="All"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="Premier (55)"
+                        class={premierBadgeClass}
+                        data-badge="Premier"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="Dell.com (5)"
+                        class={dellBadgeClass}
+                        data-badge="Dell.com"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="Email"
+                        class={emailBadgeClass}
+                        data-badge="Email"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="Paid Ads"
+                        class={paidAdsBadgeClass}
+                        data-badge="Paid Ads"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="Paid Social"
+                        class={paidSocialBadgeClass}
+                        data-badge="Paid Social"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                    <lightning-badge
+                        label="3rd Party"
+                        class={thirdPartyBadgeClass}
+                        data-badge="3rd Party"
+                        onclick={handleBadgeClick}
+                    ></lightning-badge>
+                </lightning-layout-item>
+            </lightning-layout>
+        </div>
+    </lightning-card>
+</template>
+
+
+
+
+
+import { LightningElement, track } from 'lwc';
+
+export default class CustomerEngagements extends LightningElement {
+    @track selectedFilter = 'By Category';
+    @track activeBadge = 'All';
+
+    get filterOptions() {
+        return [
+            { label: 'By Category', value: 'By Category' },
+            { label: 'By Signal', value: 'By Signal' },
+            { label: 'By Customer', value: 'By Customer' }
         ];
+    }
 
-        // Get the canvas element
-        const canvas = document.getElementById('myRadialChart');
-        const ctx = canvas.getContext('2d');
-        const tooltip = document.getElementById('tooltip');
+    handleFilterChange(event) {
+        this.selectedFilter = event.detail.value;
+    }
 
-        // Chart parameters
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const maxRadius = Math.min(centerX, centerY) - 20;
-        const gapBetweenRings = 10;
+    handleBadgeClick(event) {
+        this.activeBadge = event.target.dataset.badge;
+        console.log('activeBadge: ' + this.activeBadge);
+    }
 
-        // Function to draw the chart
-        function drawChart(highlightIndex = -1) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    get allBadgeClass() {
+        return this.getBadgeClass('All');
+    }
 
-            data.forEach((datum, index) => {
-                const radius = maxRadius - (index * (datum.strWidth + gapBetweenRings));
-                const startAngle = -0.5 * Math.PI;
-                const endAngle = startAngle + (datum.percentage / 100) * 2 * Math.PI;
+    get premierBadgeClass() {
+        return this.getBadgeClass('Premier');
+    }
 
-                const isHighlighted = index === highlightIndex;
-                const effectiveWidth = isHighlighted ? datum.strWidth + 5 : datum.strWidth;
+    get dellBadgeClass() {
+        return this.getBadgeClass('Dell.com');
+    }
 
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.lineWidth = effectiveWidth;
-                ctx.strokeStyle = datum.fill;
-                ctx.stroke();
-            });
-        }
+    get emailBadgeClass() {
+        return this.getBadgeClass('Email');
+    }
 
-        // Initial draw
-        drawChart();
+    get paidAdsBadgeClass() {
+        return this.getBadgeClass('Paid Ads');
+    }
 
-        // Function to detect mouse position over the canvas
-        function getMousePos(canvas, event) {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
-            };
-        }
+    get paidSocialBadgeClass() {
+        return this.getBadgeClass('Paid Social');
+    }
 
-        // Function to handle mouse move events
-        canvas.addEventListener('mousemove', (event) => {
-            const mousePos = getMousePos(canvas, event);
-            const dx = mousePos.x - centerX;
-            const dy = mousePos.y - centerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            let angle = Math.atan2(dy, dx);
-            if (angle < -0.5 * Math.PI) {
-                angle += 2 * Math.PI; // Adjust for negative angles
-            }
+    get thirdPartyBadgeClass() {
+        return this.getBadgeClass('3rd Party');
+    }
 
-            let highlightedIndex = -1;
-            data.forEach((datum, index) => {
-                const radius = maxRadius - (index * (datum.strWidth + gapBetweenRings));
-                const startAngle = -0.5 * Math.PI;
-                const endAngle = startAngle + (datum.percentage / 100) * 2 * Math.PI;
+    getBadgeClass(badge) {
+        return `slds-badge slds-m-around_x-small ${this.activeBadge === badge ? 'badge-active' : 'badge-inactive'}`;
+    }
+}
 
-                const isWithinRadius = distance >= (radius - datum.strWidth / 2) && distance <= (radius + datum.strWidth / 2);
-                const isWithinAngle = angle >= startAngle && angle <= endAngle;
 
-                if (isWithinRadius && isWithinAngle) {
-                    highlightedIndex = index;
-                    tooltip.style.left = `${event.clientX + 10}px`;
-                    tooltip.style.top = `${event.clientY + 10}px`;
-                    tooltip.style.display = 'block';
-                    tooltip.textContent = `${datum.percentage}%`;
-                }
-            });
 
-            if (highlightedIndex === -1) {
-                tooltip.style.display = 'none';
-            }
 
-            // Redraw the chart with the highlighted segment
-            drawChart(highlightedIndex);
-        });
-
-        // Hide tooltip when mouse leaves the canvas
-        canvas.addEventListener('mouseleave', () => {
-            tooltip.style.display = 'none';
-            drawChart();
-        });
-    </script>
-</body>
-</html>
+.combobox-larger {
+    width: 300px;
+}
+.badges-container {
+    margin-left: 1rem;
+}
+.badge-active {
+    background-color: #0070d2;
+    color: white;
+    border-radius: 1rem;
+}
+.badge-inactive {
+    color: #000;
+}
