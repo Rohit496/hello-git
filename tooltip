@@ -1,0 +1,134 @@
+Child Component
+==================
+JS
+============
+import { LightningElement, api, track } from 'lwc';
+
+export default class ToolTip extends LightningElement {
+    @api tooltipText = 'Default tooltip text';
+    @track isTooltipVisible = false;
+
+    showTooltip() {
+        this.isTooltipVisible = true;
+    }
+
+    hideTooltip() {
+        this.isTooltipVisible = false;
+    }
+}
+
+
+======================
+HTML
+=====================
+<template>
+    <div class="tooltip-container">
+        <lightning-icon
+            icon-name="utility:info"
+            size="xx-small"
+            alternative-text="Info"
+            onmouseover={showTooltip}
+            onmouseout={hideTooltip}
+        ></lightning-icon>
+        <div class="tooltip" if:true={isTooltipVisible}>{tooltipText}</div>
+    </div>
+</template>
+
+
+==================================
+CSS
+==============================
+.tooltip-container {
+    position: relative;
+    display: inline-block; /* Align items in a single line */
+    cursor: pointer;
+}
+
+.icon-tooltip-wrapper {
+    position: relative; /* Ensure tooltip is positioned relative to this container */
+}
+
+.tooltip {
+    visibility: hidden; /* Start hidden */
+    background-color: #003366; /* Dark blue background */
+    color: #ffffff; /* White text color */
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position the tooltip above the icon */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    width: 240px; /* Adjust the width as needed */
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; /* Position the arrow at the bottom of the tooltip */
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #003366 transparent transparent transparent; /* Dark blue arrow */
+}
+
+.tooltip-container:hover .tooltip {
+    visibility: visible; /* Show tooltip on hover */
+    opacity: 1;
+}
+
+
+
+===================================================================================================================
+
+Parent
+
+JS
+==========
+import { LightningElement } from 'lwc';
+
+export default class ParentToolTip extends LightningElement {}
+
+
+==========
+HTML
+=========
+<template>
+    <lightning-card
+        variant="Narrow"
+        title="ToolTip"
+        icon-name="standard:account"
+    >
+        <div class="info-container">
+            <div class="slds-var-m-around_large">
+                <span class="info-text"
+                    >Hover over the icon for more info:</span
+                >
+                <c-tool-tip
+                    tooltip-text="Sit nulla est ex deserunt exercitation anim occaecat. Nostrud ullamco deserunt aute id consequat veniam incididunt duis in sint irure nisi."
+                ></c-tool-tip>
+            </div>
+        </div>
+    </lightning-card>
+</template>
+
+
+
+============================
+CSS
+===============
+.info-container {
+    display: flex; /* Use flex to align items */
+    align-items: center; /* Center align items vertically */
+    gap: 5px; /* Adjust gap to control space between text and icon */
+}
+
+.info-text {
+    margin-right: 5px; /* Smaller margin to bring text closer to icon */
+}
+
+=============================
